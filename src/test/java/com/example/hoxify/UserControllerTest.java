@@ -1,5 +1,6 @@
 package com.example.hoxify;
 
+import com.example.hoxify.error.ApiError;
 import com.example.hoxify.shared.GenericResponse;
 import com.example.hoxify.user.User;
 import com.example.hoxify.user.UserRepository;
@@ -172,6 +173,19 @@ public class UserControllerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    @Test
+    public void postUser_whenUserIsInvalid_receiveApiError(){
+        User user = new User();
+        ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
+        assertThat(response.getBody().getUrl()).isEqualTo(API_1_0_USERS);
+    }
+
+    @Test
+    public void postUser_whenUserIsInvalid_receiveApiErrorWithValidationErrors() {
+        User user = new User();
+        ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
+        assertThat(response.getBody().getValidationErrors().size()).isEqualTo(3);
+    }
 
     public <T> ResponseEntity<T> postSignup(Object request, Class<T> response) {
         return testRestTemplate.postForEntity(API_1_0_USERS, request, response);
