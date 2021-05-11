@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -76,7 +77,7 @@ public class UserControllerTest {
     @Test
     public void postUser_whenUserHasNullUsername_receiveBadRequest() {
         User user = createValidUser();
-        user.setUserName(null);
+        user.setUsername(null);
         ResponseEntity<Object> response = postSignup(user, Object.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
@@ -100,7 +101,7 @@ public class UserControllerTest {
     @Test
     public void postUser_whenUsernameHasLessThanRequiredChars_receiveBadRequest() {
         User user = createValidUser();
-        user.setUserName("abc");
+        user.setUsername("abc");
         ResponseEntity<Object> response = postSignup(user, Object.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
@@ -109,7 +110,7 @@ public class UserControllerTest {
     public void postUser_whenUsernameExceedsTheLimitOfChars_receiveBadRequest() {
         User user = createValidUser();
         String longString = IntStream.rangeClosed(1, 256).mapToObj(x -> "a").collect(Collectors.joining());
-        user.setUserName(longString);
+        user.setUsername(longString);
         ResponseEntity<Object> response = postSignup(user, Object.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
@@ -187,13 +188,57 @@ public class UserControllerTest {
         assertThat(response.getBody().getValidationErrors().size()).isEqualTo(3);
     }
 
+    @Test
+    public void postUser_whenUserHasNullUsername_receiveNullErrorForUsername(){
+        User user = new User();
+        user.setUsername(null);
+        ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
+        Map<String,String> validationErrors = response.getBody().getValidationErrors();
+        assertThat(validationErrors.get("username")).isEqualTo("Username cannot be null");
+    }
+
+    @Test
+    public void postUser_whenUserHasNullPassword_receiveGenericMessageOfNullError() {
+        User user = new User();
+        user.setPassword(null);
+        ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
+        Map<String, String> validationErrors = response.getBody().getValidationErrors();
+        assertThat(validationErrors.get("password")).isEqualTo("Cannot be null");
+    }
+
+    @Test
+    public void postUser_whenUsernameHasInvalidLength_receiveGenericMessageOfSizeError() {
+        User user = createValidUser();
+        user.setUsername("abc");
+        ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
+        Map<String, String> validationErrors = response.getBody().getValidationErrors();
+        assertThat(validationErrors.get("username")).isEqualTo("It must have a minimum 4 and maximum 255 characters");
+    }
+
+    @Test
+    public void postUser_whenAnotherUserHasTheSameUsername_receiveBadRequest(){
+        userRepository.save(createValidUser());
+        User user = createValidUser();
+        ResponseEntity<Object> response = postSignup(user, Object.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    public void postUser_whenAnotherUserHasTheSameUsername_receiveMessageOfDuplicateUsername() {
+        userRepository.save(createValidUser());
+        User user = createValidUser();
+        ResponseEntity<ApiError> response = postSignup(user, ApiError.class);
+        Map<String, String> validationErrors = response.getBody().getValidationErrors();
+        assertThat(validationErrors.get("username")).isEqualTo("This name is in use");
+    }
+
     public <T> ResponseEntity<T> postSignup(Object request, Class<T> response) {
         return testRestTemplate.postForEntity(API_1_0_USERS, request, response);
     }
 
     private User createValidUser() {
         User user = new User();
-        user.setUserName("test-user");
+        user.setUsername("test-user");
         user.setDisplayName("test-display");
         user.setPassword("P4ssword");
         return user;
