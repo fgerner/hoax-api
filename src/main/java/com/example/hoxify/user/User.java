@@ -11,13 +11,15 @@ import javax.validation.constraints.Pattern;
 import javax.validation.constraints.Size;
 import java.util.Collection;
 
+import java.beans.Transient;
+
 @Data
 @Entity
 public class User implements UserDetails {
 
     @Id
     @GeneratedValue
-    private Long id;
+    private Integer id;
 
     @NotNull(message = "{hoaxify.constraints.username.NotNull.message}")
     @Size(min = 4, max = 255)
